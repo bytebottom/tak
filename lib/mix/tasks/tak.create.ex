@@ -19,7 +19,7 @@ defmodule Mix.Tasks.Tak.Create do
 
   ## Available Names
 
-  By default: armstrong, hickey, siebel, mccarthy
+  By default: armstrong, hickey, mccarthy, lovelace, kay, valim
 
   Configure in your `config/config.exs`:
 
@@ -52,17 +52,17 @@ defmodule Mix.Tasks.Tak.Create do
     trees_dir = Tak.trees_dir()
 
     available =
-      Enum.find(Tak.names(), fn name ->
+      Enum.filter(Tak.names(), fn name ->
         not File.dir?(Path.join(trees_dir, name))
       end)
 
     case available do
-      nil ->
+      [] ->
         Mix.shell().error("Error: All worktree names are in use (#{Enum.join(Tak.names(), ", ")})")
         exit({:shutdown, 1})
 
-      name ->
-        name
+      names ->
+        Enum.random(names)
     end
   end
 
