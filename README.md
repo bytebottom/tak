@@ -87,10 +87,12 @@ config :tak,
 
 Run `mix tak.doctor` to check your project is configured correctly. You'll need:
 
-1. `config/dev.exs` must import `dev.local.exs`:
+1. `config/config.exs` must import `dev.local.exs` for dev environment:
    ```elixir
-   # At the end of config/dev.exs
-   import_config "dev.local.exs"
+   # In config/config.exs
+   if config_env() == :dev and File.exists?(Path.expand("dev.local.exs", __DIR__)) do
+     import_config "dev.local.exs"
+   end
    ```
 
 2. Add to `.gitignore`:

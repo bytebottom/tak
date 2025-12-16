@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Tak.Doctor do
 
   This will verify:
 
-    * `config/dev.exs` imports `dev.local.exs`
+    * `config/config.exs` imports `dev.local.exs` (for dev env)
     * `config/dev.local.exs` is in `.gitignore`
     * `mise.local.toml` is in `.gitignore`
     * `trees/` directory is in `.gitignore`
@@ -52,25 +52,27 @@ defmodule Mix.Tasks.Tak.Doctor do
   end
 
   defp check_dev_local_import do
-    path = "config/dev.exs"
+    config_path = "config/config.exs"
 
     cond do
-      not File.exists?(path) ->
-        print_check(:error, "config/dev.exs exists", "File not found")
+      not File.exists?(config_path) ->
+        print_check(:error, "config/config.exs exists", "File not found")
         :error
 
       true ->
-        content = File.read!(path)
+        content = File.read!(config_path)
 
         if String.contains?(content, "dev.local.exs") do
-          print_check(:ok, "config/dev.exs imports dev.local.exs")
+          print_check(:ok, "config/config.exs imports dev.local.exs")
           :ok
         else
-          print_check(:error, "config/dev.exs imports dev.local.exs", "Missing import")
+          print_check(:error, "config/config.exs imports dev.local.exs", "Missing import")
           print_fix("""
-          Add to the end of config/dev.exs:
+          Add to config/config.exs:
 
-              import_config "dev.local.exs"
+              if config_env() == :dev and File.exists?(Path.expand("dev.local.exs", __DIR__)) do
+                import_config "dev.local.exs"
+              end
 
           Then create an empty config/dev.local.exs:
 
