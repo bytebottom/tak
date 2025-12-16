@@ -117,6 +117,7 @@ defmodule Mix.Tasks.Tak.Create do
     tak_config = """
 
     # Tak worktree config (#{name})
+    # These values override any earlier config above
     config :#{app_name}, #{module_name}Web.Endpoint,
       http: [port: #{port}]
 
