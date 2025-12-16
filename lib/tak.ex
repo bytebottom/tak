@@ -17,7 +17,7 @@ defmodule Tak do
   Configure Tak in your `config/config.exs`:
 
       config :tak,
-        names: ~w(armstrong hickey siebel mccarthy),
+        names: ~w(armstrong hickey mccarthy lovelace kay valim),
         base_port: 4000,
         trees_dir: "trees"
 
@@ -27,10 +27,10 @@ defmodule Tak do
     * `config/dev.local.exs` with isolated port and database
     * `mise.local.toml` with PORT env var (if mise is installed)
 
-  Ports are assigned based on name index: armstrong=4010, hickey=4020, etc.
+  Ports are assigned based on name index: armstrong=4010, hickey=4020, mccarthy=4030, etc.
   """
 
-  @default_names ~w(armstrong hickey siebel mccarthy)
+  @default_names ~w(armstrong hickey mccarthy lovelace kay valim)
   @default_base_port 4000
   @default_trees_dir "trees"
 

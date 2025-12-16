@@ -14,15 +14,34 @@ Git worktree management for Elixir/Phoenix development.
 
 ## Installation
 
-Add `tak` to your list of dependencies in `mix.exs`:
+1. Add `tak` to your dependencies in `mix.exs`:
 
-```elixir
-def deps do
-  [
-    {:tak, "~> 0.1.0", only: :dev}
-  ]
-end
-```
+   ```elixir
+   def deps do
+     [
+       {:tak, "~> 0.1.0", only: :dev}
+     ]
+   end
+   ```
+
+2. Add local config import to `config/config.exs` (this allows tak to create `dev.local.exs` in each worktree with isolated port and database settings, without modifying tracked files):
+
+   ```elixir
+   # At the end of config/config.exs
+   if File.exists?("#{__DIR__}/#{config_env()}.local.exs") do
+     import_config "#{config_env()}.local.exs"
+   end
+   ```
+
+3. Add to `.gitignore`:
+
+   ```
+   /config/*.local.exs
+   /mise.local.toml
+   /trees/
+   ```
+
+4. Run `mix tak.doctor` to verify your setup.
 
 ## Usage
 
@@ -70,7 +89,7 @@ Configure Tak in your `config/config.exs`:
 
 ```elixir
 config :tak,
-  names: ~w(armstrong hickey siebel mccarthy),
+  names: ~w(armstrong hickey mccarthy lovelace kay valim),
   base_port: 4000,
   trees_dir: "trees"
 ```
@@ -79,28 +98,9 @@ config :tak,
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `names` | `~w(armstrong hickey siebel mccarthy)` | Available worktree slot names |
+| `names` | `~w(armstrong hickey mccarthy lovelace kay valim)` | Available worktree slot names |
 | `base_port` | `4000` | Base port (worktrees use 4010, 4020, etc.) |
 | `trees_dir` | `"trees"` | Directory to store worktrees |
-
-## Setup
-
-Run `mix tak.doctor` to check your project is configured correctly. You'll need:
-
-1. `config/config.exs` must import local overrides:
-   ```elixir
-   # At the end of config/config.exs
-   if File.exists?("#{__DIR__}/#{config_env()}.local.exs") do
-     import_config "#{config_env()}.local.exs"
-   end
-   ```
-
-2. Add to `.gitignore`:
-   ```
-   /config/dev.local.exs
-   /mise.local.toml
-   /trees/
-   ```
 
 ## How it works
 

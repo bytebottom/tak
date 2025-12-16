@@ -3,7 +3,7 @@ defmodule TakTest do
 
   describe "names/0" do
     test "returns default names" do
-      assert Tak.names() == ~w(armstrong hickey siebel mccarthy)
+      assert Tak.names() == ~w(armstrong hickey mccarthy lovelace kay valim)
     end
   end
 
@@ -23,8 +23,10 @@ defmodule TakTest do
     test "calculates port based on name index" do
       assert Tak.port_for("armstrong") == 4010
       assert Tak.port_for("hickey") == 4020
-      assert Tak.port_for("siebel") == 4030
-      assert Tak.port_for("mccarthy") == 4040
+      assert Tak.port_for("mccarthy") == 4030
+      assert Tak.port_for("lovelace") == 4040
+      assert Tak.port_for("kay") == 4050
+      assert Tak.port_for("valim") == 4060
     end
 
     test "returns nil for unknown name" do
