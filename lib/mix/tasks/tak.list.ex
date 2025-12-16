@@ -138,10 +138,22 @@ defmodule Mix.Tasks.Tak.List do
   end
 
   defp get_worktree_port(worktree_path) do
+    dev_local_path = Path.join([worktree_path, "config", "dev.local.exs"])
     mise_path = Path.join(worktree_path, "mise.local.toml")
     env_path = Path.join(worktree_path, ".env")
 
     cond do
+      File.exists?(dev_local_path) ->
+        dev_local_path
+        |> File.read!()
+        |> then(fn content ->
+          case Regex.run(~r/http:\s*\[port:\s*(\d+)\]/, content) do
+            [_, port] -> String.to_integer(port)
+            _ -> nil
+          end
+        end)
+
+      # Fallback for legacy mise.local.toml
       File.exists?(mise_path) ->
         mise_path
         |> File.read!()
@@ -152,6 +164,7 @@ defmodule Mix.Tasks.Tak.List do
           end
         end)
 
+      # Fallback for .env
       File.exists?(env_path) ->
         env_path
         |> File.read!()

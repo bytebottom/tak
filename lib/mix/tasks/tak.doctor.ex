@@ -10,7 +10,7 @@ defmodule Mix.Tasks.Tak.Doctor do
     * `config/dev.exs` imports `dev.local.exs`
     * `config/dev.local.exs` is in `.gitignore`
     * `trees/` directory is in `.gitignore`
-    * Required tools are available (git, mise, dropdb)
+    * Required tools are available (git, dropdb)
 
   """
 
@@ -27,7 +27,6 @@ defmodule Mix.Tasks.Tak.Doctor do
       check_dev_local_gitignore(),
       check_trees_gitignore(),
       check_git(),
-      check_mise(),
       check_dropdb()
     ]
 
@@ -137,18 +136,6 @@ defmodule Mix.Tasks.Tak.Doctor do
       _ ->
         print_check(:error, "git available", "Not found")
         :error
-    end
-  end
-
-  defp check_mise do
-    case System.cmd("which", ["mise"], stderr_to_stdout: true) do
-      {_, 0} ->
-        print_check(:ok, "mise available")
-        :ok
-
-      _ ->
-        print_check(:warn, "mise available", "Not found (optional, for port config)")
-        :ok
     end
   end
 

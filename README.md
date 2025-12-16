@@ -26,8 +26,7 @@ $ mix tak.create feature/login
 
 This will:
 - Create a git worktree in `trees/<name>/`
-- Set up a unique port via `mise.local.toml`
-- Create `config/dev.local.exs` with isolated database
+- Create `config/dev.local.exs` with isolated port and database
 - Copy dependencies and build artifacts from main repo
 - Run `mix deps.get` and `mix ecto.setup`
 
@@ -69,10 +68,25 @@ config :tak,
 
 ## How it works
 
-Each worktree gets:
+Each worktree gets a `config/dev.local.exs` with:
 - **Unique port**: Assigned based on name index (armstrong=4010, hickey=4020, etc.)
 - **Isolated database**: `<app>_dev_<name>` (e.g., `myapp_dev_armstrong`)
-- **Local config**: `mise.local.toml` for port, `config/dev.local.exs` for database
+
+## Setup
+
+Run `mix tak.doctor` to check your project is configured correctly. You'll need:
+
+1. `config/dev.exs` must import `dev.local.exs`:
+   ```elixir
+   # At the end of config/dev.exs
+   import_config "dev.local.exs"
+   ```
+
+2. Add to `.gitignore`:
+   ```
+   /config/dev.local.exs
+   /trees/
+   ```
 
 ## License
 

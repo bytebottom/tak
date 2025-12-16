@@ -8,8 +8,7 @@ defmodule Mix.Tasks.Tak.Create do
   This will:
 
     * Create a git worktree in `trees/<name>/`
-    * Set up a unique port via `mise.local.toml`
-    * Create `config/dev.local.exs` with isolated database
+    * Create `config/dev.local.exs` with isolated port and database
     * Copy dependencies and build artifacts from main repo
     * Run `mix deps.get` and `mix ecto.setup`
 
@@ -104,30 +103,35 @@ defmodule Mix.Tasks.Tak.Create do
       File.cp!(".env", Path.join(worktree_path, ".env"))
     end
 
-    # Create mise.local.toml for port
-    mise_config = """
-    [env]
-    PORT = "#{port}"
-    """
-
-    File.write!(Path.join(worktree_path, "mise.local.toml"), mise_config)
-    System.cmd("mise", ["trust", Path.join(worktree_path, "mise.local.toml")], stderr_to_stdout: true)
-
-    # Create dev.local.exs for database
+    # Create dev.local.exs for port and database
     app_name = Tak.app_name()
     module_name = Tak.module_name()
     database = Tak.database_for(name)
 
-    dev_local = """
-    import Config
+    config_dir = Path.join(worktree_path, "config")
+    File.mkdir_p!(config_dir)
+    dest_path = Path.join(config_dir, "dev.local.exs")
+    source_path = "config/dev.local.exs"
+
+    # Tak-specific config to append
+    tak_config = """
+
+    # Tak worktree config (#{name})
+    config :#{app_name}, #{module_name}Web.Endpoint,
+      http: [port: #{port}]
 
     config :#{app_name}, #{module_name}.Repo,
       database: "#{database}"
     """
 
-    config_dir = Path.join(worktree_path, "config")
-    File.mkdir_p!(config_dir)
-    File.write!(Path.join(config_dir, "dev.local.exs"), dev_local)
+    if File.exists?(source_path) do
+      # Copy existing dev.local.exs and append tak config
+      existing = File.read!(source_path)
+      File.write!(dest_path, existing <> tak_config)
+    else
+      # Create new dev.local.exs
+      File.write!(dest_path, "import Config" <> tak_config)
+    end
 
     # Copy dependencies and caches
     Mix.shell().info("Copying dependencies...")
