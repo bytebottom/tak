@@ -82,6 +82,23 @@ defmodule TakTest do
       assert Tak.get_worktree_port(tmp_dir) == 4020
     end
 
+    test "reads port from multiline http config", %{tmp_dir: tmp_dir} do
+      config_dir = Path.join(tmp_dir, "config")
+      File.mkdir_p!(config_dir)
+
+      File.write!(Path.join(config_dir, "dev.local.exs"), """
+      import Config
+
+      config :myapp, MyappWeb.Endpoint,
+        http: [
+          ip: {127, 0, 0, 1},
+          port: 4050
+        ]
+      """)
+
+      assert Tak.get_worktree_port(tmp_dir) == 4050
+    end
+
     test "falls back to mise.local.toml", %{tmp_dir: tmp_dir} do
       File.write!(Path.join(tmp_dir, "mise.local.toml"), """
       [env]

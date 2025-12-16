@@ -9,6 +9,7 @@ defmodule Mix.Tasks.Tak.Doctor do
 
     * `config/dev.exs` imports `dev.local.exs`
     * `config/dev.local.exs` is in `.gitignore`
+    * `mise.local.toml` is in `.gitignore`
     * `trees/` directory is in `.gitignore`
     * Required tools are available (git, dropdb)
 
@@ -25,6 +26,7 @@ defmodule Mix.Tasks.Tak.Doctor do
     checks = [
       check_dev_local_import(),
       check_dev_local_gitignore(),
+      check_mise_local_gitignore(),
       check_trees_gitignore(),
       check_git(),
       check_dropdb()
@@ -84,46 +86,74 @@ defmodule Mix.Tasks.Tak.Doctor do
     check_gitignore("dev.local.exs", "config/dev.local.exs")
   end
 
+  defp check_mise_local_gitignore do
+    check_gitignore_optional("mise.local.toml", "mise.local.toml", "only needed if using mise")
+  end
+
   defp check_trees_gitignore do
     trees_dir = Tak.trees_dir()
     check_gitignore(trees_dir, "#{trees_dir}/")
   end
 
   defp check_gitignore(pattern, display) do
-    gitignore_path = ".gitignore"
+    case gitignore_contains?(pattern) do
+      {:ok, true} ->
+        print_check(:ok, "#{display} in .gitignore")
+        :ok
 
-    cond do
-      not File.exists?(gitignore_path) ->
-        print_check(:error, "#{display} in .gitignore", ".gitignore not found")
+      {:ok, false} ->
+        print_check(:error, "#{display} in .gitignore", "Not ignored")
+        print_fix("Add to .gitignore:\n\n    #{display}")
         :error
 
-      true ->
-        content = File.read!(gitignore_path)
-        lines = String.split(content, "\n")
+      {:error, reason} ->
+        print_check(:error, "#{display} in .gitignore", reason)
+        :error
+    end
+  end
 
-        # Check for the pattern or wildcards that would match
-        ignored =
-          Enum.any?(lines, fn line ->
-            line = String.trim(line)
+  defp check_gitignore_optional(pattern, display, note) do
+    case gitignore_contains?(pattern) do
+      {:ok, true} ->
+        print_check(:ok, "#{display} in .gitignore")
+        :ok
 
-            cond do
-              String.starts_with?(line, "#") -> false
-              line == "" -> false
-              String.contains?(line, pattern) -> true
-              line == "/#{pattern}" -> true
-              line == "#{pattern}" -> true
-              true -> false
-            end
-          end)
+      {:ok, false} ->
+        print_check(:warn, "#{display} in .gitignore", note)
+        :ok
 
-        if ignored do
-          print_check(:ok, "#{display} in .gitignore")
-          :ok
-        else
-          print_check(:error, "#{display} in .gitignore", "Not ignored")
-          print_fix("Add to .gitignore:\n\n    #{display}")
-          :error
-        end
+      {:error, _reason} ->
+        # Don't fail for optional checks if .gitignore doesn't exist
+        print_check(:warn, "#{display} in .gitignore", note)
+        :ok
+    end
+  end
+
+  defp gitignore_contains?(pattern) do
+    gitignore_path = ".gitignore"
+
+    if not File.exists?(gitignore_path) do
+      {:error, ".gitignore not found"}
+    else
+      content = File.read!(gitignore_path)
+      lines = String.split(content, "\n")
+
+      # Check for the pattern or wildcards that would match
+      ignored =
+        Enum.any?(lines, fn line ->
+          line = String.trim(line)
+
+          cond do
+            String.starts_with?(line, "#") -> false
+            line == "" -> false
+            String.contains?(line, pattern) -> true
+            line == "/#{pattern}" -> true
+            line == "#{pattern}" -> true
+            true -> false
+          end
+        end)
+
+      {:ok, ignored}
     end
   end
 

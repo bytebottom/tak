@@ -83,12 +83,6 @@ config :tak,
 | `base_port` | `4000` | Base port (worktrees use 4010, 4020, etc.) |
 | `trees_dir` | `"trees"` | Directory to store worktrees |
 
-## How it works
-
-Each worktree gets a `config/dev.local.exs` with:
-- **Unique port**: Assigned based on name index (armstrong=4010, hickey=4020, etc.)
-- **Isolated database**: `<app>_dev_<name>` (e.g., `myapp_dev_armstrong`)
-
 ## Setup
 
 Run `mix tak.doctor` to check your project is configured correctly. You'll need:
@@ -102,8 +96,17 @@ Run `mix tak.doctor` to check your project is configured correctly. You'll need:
 2. Add to `.gitignore`:
    ```
    /config/dev.local.exs
+   /mise.local.toml
    /trees/
    ```
+
+## How it works
+
+Each worktree gets a `config/dev.local.exs` with:
+- **Unique port**: Assigned based on name index (armstrong=4010, hickey=4020, etc.)
+- **Isolated database**: `<app>_dev_<name>` (e.g., `myapp_dev_armstrong`)
+
+If [mise](https://mise.jdx.dev/) is installed, a `mise.local.toml` is also created with the PORT env var to override any inherited environment.
 
 ## License
 

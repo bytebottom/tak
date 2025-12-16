@@ -9,6 +9,7 @@ defmodule Mix.Tasks.Tak.Create do
 
     * Create a git worktree in `trees/<name>/`
     * Create `config/dev.local.exs` with isolated port and database
+    * Create `mise.local.toml` with PORT env var (if mise is installed)
     * Run `mix deps.get` and `mix ecto.setup`
 
   ## Arguments

@@ -116,8 +116,12 @@ defmodule Tak do
   """
   def kill_port(port) do
     case pid_on_port(port) do
-      nil -> :ok
-      pid -> System.cmd("kill", ["-9", pid], stderr_to_stdout: true)
+      nil ->
+        :ok
+
+      pid ->
+        System.cmd("kill", ["-9", pid], stderr_to_stdout: true)
+        :ok
     end
   end
 
@@ -149,8 +153,8 @@ defmodule Tak do
         dev_local_path
         |> File.read!()
         |> then(fn content ->
-          # Match port: anywhere within http: [...] block
-          case Regex.run(~r/http:\s*\[[^\]]*port:\s*(\d+)/, content) do
+          # Match port: anywhere within http: [...] block (handles multiline)
+          case Regex.run(~r/http:\s*\[[\s\S]*?port:\s*(\d+)/, content) do
             [_, port] -> String.to_integer(port)
             _ -> nil
           end
