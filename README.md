@@ -37,7 +37,6 @@ This will:
 - Create a git worktree in `trees/<name>/`
 - Create `config/dev.local.exs` with isolated port and database
 - If [mise](https://mise.jdx.dev/) is installed, create `mise.local.toml` with PORT env var
-- Copy dependencies and build artifacts from main repo
 - Run `mix deps.get` and `mix ecto.setup`
 
 ### List worktrees

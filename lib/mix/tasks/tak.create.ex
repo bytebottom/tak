@@ -9,7 +9,6 @@ defmodule Mix.Tasks.Tak.Create do
 
     * Create a git worktree in `trees/<name>/`
     * Create `config/dev.local.exs` with isolated port and database
-    * Copy dependencies and build artifacts from main repo
     * Run `mix deps.get` and `mix ecto.setup`
 
   ## Arguments
@@ -147,17 +146,8 @@ defmodule Mix.Tasks.Tak.Create do
       System.cmd("mise", ["trust", mise_path], stderr_to_stdout: true)
     end
 
-    # Copy dependencies and caches
-    Mix.shell().info("Copying dependencies...")
-
-    for dir <- ["deps", "_build", ".expert"] do
-      if File.dir?(dir) do
-        File.cp_r!(dir, Path.join(worktree_path, dir))
-      end
-    end
-
     # Run setup in worktree
-    Mix.shell().info("Installing dependencies...")
+    Mix.shell().info("Fetching dependencies...")
     mix_in_worktree!(worktree_path, ["deps.get"])
 
     Mix.shell().info("Setting up database...")
