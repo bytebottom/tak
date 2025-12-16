@@ -87,11 +87,11 @@ config :tak,
 
 Run `mix tak.doctor` to check your project is configured correctly. You'll need:
 
-1. `config/config.exs` must import `dev.local.exs` for dev environment:
+1. `config/config.exs` must import local overrides:
    ```elixir
-   # In config/config.exs
-   if config_env() == :dev and File.exists?(Path.expand("dev.local.exs", __DIR__)) do
-     import_config "dev.local.exs"
+   # At the end of config/config.exs
+   if File.exists?("#{__DIR__}/#{config_env()}.local.exs") do
+     import_config "#{config_env()}.local.exs"
    end
    ```
 
