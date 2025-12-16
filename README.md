@@ -4,6 +4,14 @@ Git worktree management for Elixir/Phoenix development.
 
 **Tak** (Dutch for "branch") helps you manage multiple git worktrees, each with isolated ports and databases for parallel development.
 
+## Requirements
+
+- **Elixir/Phoenix** project with Ecto
+- **macOS or Linux** (uses `lsof` for port detection)
+- **PostgreSQL** (for database management)
+- **Git** (for worktree management)
+- **mise** (optional, for PORT environment variable)
+
 ## Installation
 
 Add `tak` to your list of dependencies in `mix.exs`:
@@ -22,11 +30,13 @@ end
 
 ```bash
 $ mix tak.create feature/login
+$ mix tak.create feature/login armstrong  # specify name
 ```
 
 This will:
 - Create a git worktree in `trees/<name>/`
 - Create `config/dev.local.exs` with isolated port and database
+- If [mise](https://mise.jdx.dev/) is installed, create `mise.local.toml` with PORT env var
 - Copy dependencies and build artifacts from main repo
 - Run `mix deps.get` and `mix ecto.setup`
 
@@ -46,6 +56,14 @@ $ mix tak.remove armstrong --force
 ```
 
 This will stop services, remove the worktree, delete the branch, and drop the database.
+
+### Check configuration
+
+```bash
+$ mix tak.doctor
+```
+
+Verifies your project is configured correctly for tak (gitignore, dev.local.exs import, etc.).
 
 ## Configuration
 

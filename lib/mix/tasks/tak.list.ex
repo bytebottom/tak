@@ -64,8 +64,8 @@ defmodule Mix.Tasks.Tak.List do
     {running, stopped} =
       Enum.reduce(worktrees, {running, stopped}, fn name, {running_acc, stopped_acc} ->
         worktree_path = Path.join(trees_dir, name)
-        branch = get_worktree_branch(worktree_path)
-        port = get_worktree_port(worktree_path)
+        branch = Tak.get_worktree_branch(worktree_path) || "unknown"
+        port = Tak.get_worktree_port(worktree_path)
         database = Tak.database_for(name)
 
         {status, color, running_acc, stopped_acc} = check_status(port, running_acc, stopped_acc)
@@ -109,74 +109,6 @@ defmodule Mix.Tasks.Tak.List do
     case System.cmd("git", ["branch", "--show-current"], stderr_to_stdout: true) do
       {output, 0} -> String.trim(output)
       _ -> "unknown"
-    end
-  end
-
-  defp get_worktree_branch(worktree_path) do
-    abs_path = Path.expand(worktree_path)
-
-    case System.cmd("git", ["worktree", "list", "--porcelain"], stderr_to_stdout: true) do
-      {output, 0} ->
-        output
-        |> String.split("\n\n")
-        |> Enum.find_value("unknown", fn block ->
-          if String.contains?(block, "worktree #{abs_path}") do
-            block
-            |> String.split("\n")
-            |> Enum.find_value("unknown", fn line ->
-              case String.split(line, "branch refs/heads/") do
-                [_, branch] -> branch
-                _ -> nil
-              end
-            end)
-          end
-        end)
-
-      _ ->
-        "unknown"
-    end
-  end
-
-  defp get_worktree_port(worktree_path) do
-    dev_local_path = Path.join([worktree_path, "config", "dev.local.exs"])
-    mise_path = Path.join(worktree_path, "mise.local.toml")
-    env_path = Path.join(worktree_path, ".env")
-
-    cond do
-      File.exists?(dev_local_path) ->
-        dev_local_path
-        |> File.read!()
-        |> then(fn content ->
-          case Regex.run(~r/http:\s*\[port:\s*(\d+)\]/, content) do
-            [_, port] -> String.to_integer(port)
-            _ -> nil
-          end
-        end)
-
-      # Fallback for legacy mise.local.toml
-      File.exists?(mise_path) ->
-        mise_path
-        |> File.read!()
-        |> then(fn content ->
-          case Regex.run(~r/PORT\s*=\s*"?(\d+)"?/, content) do
-            [_, port] -> String.to_integer(port)
-            _ -> nil
-          end
-        end)
-
-      # Fallback for .env
-      File.exists?(env_path) ->
-        env_path
-        |> File.read!()
-        |> then(fn content ->
-          case Regex.run(~r/^PORT=(\d+)/m, content) do
-            [_, port] -> String.to_integer(port)
-            _ -> nil
-          end
-        end)
-
-      true ->
-        nil
     end
   end
 

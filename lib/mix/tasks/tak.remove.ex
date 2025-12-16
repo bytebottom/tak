@@ -65,8 +65,8 @@ defmodule Mix.Tasks.Tak.Remove do
     end
 
     # Get info before removal
-    branch = get_worktree_branch(worktree_path)
-    port = get_worktree_port(worktree_path)
+    branch = Tak.get_worktree_branch(worktree_path)
+    port = Tak.get_worktree_port(worktree_path)
     database = Tak.database_for(name)
 
     # Stop services on port
@@ -133,71 +133,4 @@ defmodule Mix.Tasks.Tak.Remove do
     Mix.shell().info("  Database: #{database}")
   end
 
-  defp get_worktree_branch(worktree_path) do
-    abs_path = Path.expand(worktree_path)
-
-    case System.cmd("git", ["worktree", "list", "--porcelain"], stderr_to_stdout: true) do
-      {output, 0} ->
-        output
-        |> String.split("\n\n")
-        |> Enum.find_value(fn block ->
-          if String.contains?(block, "worktree #{abs_path}") do
-            block
-            |> String.split("\n")
-            |> Enum.find_value(fn line ->
-              case String.split(line, "branch refs/heads/") do
-                [_, branch] -> branch
-                _ -> nil
-              end
-            end)
-          end
-        end)
-
-      _ ->
-        nil
-    end
-  end
-
-  defp get_worktree_port(worktree_path) do
-    dev_local_path = Path.join([worktree_path, "config", "dev.local.exs"])
-    mise_path = Path.join(worktree_path, "mise.local.toml")
-    env_path = Path.join(worktree_path, ".env")
-
-    cond do
-      File.exists?(dev_local_path) ->
-        dev_local_path
-        |> File.read!()
-        |> then(fn content ->
-          case Regex.run(~r/http:\s*\[port:\s*(\d+)\]/, content) do
-            [_, port] -> String.to_integer(port)
-            _ -> nil
-          end
-        end)
-
-      # Fallback for legacy mise.local.toml
-      File.exists?(mise_path) ->
-        mise_path
-        |> File.read!()
-        |> then(fn content ->
-          case Regex.run(~r/PORT\s*=\s*"?(\d+)"?/, content) do
-            [_, port] -> String.to_integer(port)
-            _ -> nil
-          end
-        end)
-
-      # Fallback for .env
-      File.exists?(env_path) ->
-        env_path
-        |> File.read!()
-        |> then(fn content ->
-          case Regex.run(~r/^PORT=(\d+)/m, content) do
-            [_, port] -> String.to_integer(port)
-            _ -> nil
-          end
-        end)
-
-      true ->
-        nil
-    end
-  end
 end

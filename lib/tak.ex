@@ -7,9 +7,10 @@ defmodule Tak do
 
   ## Available Tasks
 
-    * `mix tak.create` - Create a new worktree
+    * `mix tak.create` - Create a new worktree with isolated config
     * `mix tak.list` - List all worktrees and their status
     * `mix tak.remove` - Remove a worktree and clean up resources
+    * `mix tak.doctor` - Check if project is configured correctly
 
   ## Configuration
 
@@ -20,6 +21,13 @@ defmodule Tak do
         base_port: 4000,
         trees_dir: "trees"
 
+  ## How It Works
+
+  Each worktree gets:
+    * `config/dev.local.exs` with isolated port and database
+    * `mise.local.toml` with PORT env var (if mise is installed)
+
+  Ports are assigned based on name index: armstrong=4010, hickey=4020, etc.
   """
 
   @default_names ~w(armstrong hickey siebel mccarthy)
@@ -120,6 +128,86 @@ defmodule Tak do
     case System.cmd("which", ["mise"], stderr_to_stdout: true) do
       {_, 0} -> true
       _ -> false
+    end
+  end
+
+  @doc """
+  Gets the port configured for a worktree by reading its config files.
+
+  Checks in order:
+  1. `config/dev.local.exs` - Elixir config
+  2. `mise.local.toml` - mise env (legacy)
+  3. `.env` - dotenv file (legacy)
+  """
+  def get_worktree_port(worktree_path) do
+    dev_local_path = Path.join([worktree_path, "config", "dev.local.exs"])
+    mise_path = Path.join(worktree_path, "mise.local.toml")
+    env_path = Path.join(worktree_path, ".env")
+
+    cond do
+      File.exists?(dev_local_path) ->
+        dev_local_path
+        |> File.read!()
+        |> then(fn content ->
+          # Match port: anywhere within http: [...] block
+          case Regex.run(~r/http:\s*\[[^\]]*port:\s*(\d+)/, content) do
+            [_, port] -> String.to_integer(port)
+            _ -> nil
+          end
+        end)
+
+      # Fallback for legacy mise.local.toml
+      File.exists?(mise_path) ->
+        mise_path
+        |> File.read!()
+        |> then(fn content ->
+          case Regex.run(~r/PORT\s*=\s*"?(\d+)"?/, content) do
+            [_, port] -> String.to_integer(port)
+            _ -> nil
+          end
+        end)
+
+      # Fallback for .env
+      File.exists?(env_path) ->
+        env_path
+        |> File.read!()
+        |> then(fn content ->
+          case Regex.run(~r/^PORT=(\d+)/m, content) do
+            [_, port] -> String.to_integer(port)
+            _ -> nil
+          end
+        end)
+
+      true ->
+        nil
+    end
+  end
+
+  @doc """
+  Gets the branch name for a worktree from git.
+  """
+  def get_worktree_branch(worktree_path) do
+    abs_path = Path.expand(worktree_path)
+
+    case System.cmd("git", ["worktree", "list", "--porcelain"], stderr_to_stdout: true) do
+      {output, 0} ->
+        output
+        |> String.split("\n\n")
+        |> Enum.find_value(fn block ->
+          if String.contains?(block, "worktree #{abs_path}") do
+            block
+            |> String.split("\n")
+            |> Enum.find_value(fn line ->
+              case String.split(line, "branch refs/heads/") do
+                [_, branch] -> branch
+                _ -> nil
+              end
+            end)
+          end
+        end)
+
+      _ ->
+        nil
     end
   end
 end
