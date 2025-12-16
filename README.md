@@ -4,6 +4,8 @@ Git worktree management for Elixir/Phoenix development.
 
 **Tak** (Dutch for "branch") helps you manage multiple git worktrees, each with isolated ports and databases for parallel development.
 
+![Tak demo](https://raw.githubusercontent.com/bytebottom/tak/main/assets/tak-demo.gif)
+
 ## Requirements
 
 - **Elixir/Phoenix** project with Ecto
