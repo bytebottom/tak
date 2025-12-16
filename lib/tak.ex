@@ -112,4 +112,14 @@ defmodule Tak do
       pid -> System.cmd("kill", ["-9", pid], stderr_to_stdout: true)
     end
   end
+
+  @doc """
+  Checks if mise is available on the system.
+  """
+  def mise_available? do
+    case System.cmd("which", ["mise"], stderr_to_stdout: true) do
+      {_, 0} -> true
+      _ -> false
+    end
+  end
 end

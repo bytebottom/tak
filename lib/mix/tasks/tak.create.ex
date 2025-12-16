@@ -134,6 +134,19 @@ defmodule Mix.Tasks.Tak.Create do
       File.write!(dest_path, "import Config" <> tak_config)
     end
 
+    # If mise is installed, create mise.local.toml for PORT env var
+    # This ensures PORT overrides any inherited env var from parent directories
+    if Tak.mise_available?() do
+      mise_config = """
+      [env]
+      PORT = "#{port}"
+      """
+
+      mise_path = Path.join(worktree_path, "mise.local.toml")
+      File.write!(mise_path, mise_config)
+      System.cmd("mise", ["trust", mise_path], stderr_to_stdout: true)
+    end
+
     # Copy dependencies and caches
     Mix.shell().info("Copying dependencies...")
 
