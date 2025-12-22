@@ -25,10 +25,16 @@ defmodule Mix.Tasks.Tak.Create do
 
       config :tak, names: ~w(custom names here)
 
+  ## Options
+
+      --db    - Create database (overrides config)
+      --no-db - Skip database creation (overrides config)
+
   ## Examples
 
       $ mix tak.create feature/login
       $ mix tak.create feature/login armstrong
+      $ mix tak.create feature/login --no-db
 
   """
 
@@ -36,15 +42,23 @@ defmodule Mix.Tasks.Tak.Create do
 
   @impl Mix.Task
   def run(args) do
-    case args do
+    {opts, positional, _} = OptionParser.parse(args, switches: [db: :boolean])
+
+    create_db =
+      case opts[:db] do
+        nil -> Tak.create_database?()
+        value -> value
+      end
+
+    case positional do
       [] ->
-        Mix.shell().error("Usage: mix tak.create <branch-name> [name]")
+        Mix.shell().error("Usage: mix tak.create <branch-name> [name] [--db | --no-db]")
         Mix.shell().info("Available names: #{Enum.join(Tak.names(), ", ")}")
         exit({:shutdown, 1})
 
       [branch | rest] ->
         name = List.first(rest) || pick_available_name()
-        create_worktree(branch, name)
+        create_worktree(branch, name, create_db: create_db)
     end
   end
 
@@ -66,7 +80,7 @@ defmodule Mix.Tasks.Tak.Create do
     end
   end
 
-  defp create_worktree(branch, name) do
+  defp create_worktree(branch, name, opts) do
     unless name in Tak.names() do
       Mix.shell().error("Error: Invalid name '#{name}'. Choose from: #{Enum.join(Tak.names(), ", ")}")
       exit({:shutdown, 1})
@@ -103,10 +117,9 @@ defmodule Mix.Tasks.Tak.Create do
       File.cp!(".env", Path.join(worktree_path, ".env"))
     end
 
-    # Create dev.local.exs for port and database
+    # Create dev.local.exs for port (and optionally database)
     app_name = Tak.app_name()
     module_name = Tak.module_name()
-    database = Tak.database_for(name)
 
     config_dir = Path.join(worktree_path, "config")
     File.mkdir_p!(config_dir)
@@ -114,16 +127,26 @@ defmodule Mix.Tasks.Tak.Create do
     source_path = "config/dev.local.exs"
 
     # Tak-specific config to append
+    db_config =
+      if opts[:create_db] do
+        database = Tak.database_for(name)
+
+        """
+
+        config :#{app_name}, #{module_name}.Repo,
+          database: "#{database}"
+        """
+      else
+        ""
+      end
+
     tak_config = """
 
     # Tak worktree config (#{name})
     # These values override any earlier config above
     config :#{app_name}, #{module_name}Web.Endpoint,
       http: [port: #{port}]
-
-    config :#{app_name}, #{module_name}.Repo,
-      database: "#{database}"
-    """
+    """ <> db_config
 
     if File.exists?(source_path) do
       # Copy existing dev.local.exs and append tak config
@@ -151,8 +174,10 @@ defmodule Mix.Tasks.Tak.Create do
     Mix.shell().info("Fetching dependencies...")
     mix_in_worktree!(worktree_path, ["deps.get"])
 
-    Mix.shell().info("Setting up database...")
-    mix_in_worktree!(worktree_path, ["ecto.setup"])
+    if opts[:create_db] do
+      Mix.shell().info("Setting up database...")
+      mix_in_worktree!(worktree_path, ["ecto.setup"])
+    end
 
     # Success output
     Mix.shell().info("")
@@ -160,7 +185,7 @@ defmodule Mix.Tasks.Tak.Create do
     Mix.shell().info("")
     Mix.shell().info(IO.ANSI.format([:bright, name, :reset, " ", :faint, "(#{branch})"]))
     Mix.shell().info("  Port:     #{port}")
-    Mix.shell().info("  Database: #{database}")
+    if opts[:create_db], do: Mix.shell().info("  Database: #{Tak.database_for(name)}")
     Mix.shell().info("  Location: #{worktree_path}")
     Mix.shell().info("")
     Mix.shell().info(IO.ANSI.format([:faint, "To start the server:"]))

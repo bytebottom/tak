@@ -19,6 +19,19 @@ defmodule TakTest do
     end
   end
 
+  describe "create_database?/0" do
+    test "returns true by default" do
+      assert Tak.create_database?() == true
+    end
+
+    test "respects config override" do
+      Application.put_env(:tak, :create_database, false)
+      assert Tak.create_database?() == false
+    after
+      Application.delete_env(:tak, :create_database)
+    end
+  end
+
   describe "port_for/1" do
     test "calculates port based on name index" do
       assert Tak.port_for("armstrong") == 4010
@@ -45,6 +58,66 @@ defmodule TakTest do
     test "camelizes the app name" do
       # :tak -> "Tak"
       assert Tak.module_name() == "Tak"
+    end
+  end
+
+describe "has_database_config?/1" do
+    setup do
+      tmp_dir = Path.join(System.tmp_dir!(), "tak_test_#{:rand.uniform(100_000)}")
+      File.mkdir_p!(tmp_dir)
+      on_exit(fn -> File.rm_rf!(tmp_dir) end)
+      {:ok, tmp_dir: tmp_dir}
+    end
+
+    test "returns true when tak added database config", %{tmp_dir: tmp_dir} do
+      config_dir = Path.join(tmp_dir, "config")
+      File.mkdir_p!(config_dir)
+
+      File.write!(Path.join(config_dir, "dev.local.exs"), """
+      import Config
+
+      # Tak worktree config (armstrong)
+      config :myapp, MyappWeb.Endpoint,
+        http: [port: 4010]
+
+      config :myapp, Myapp.Repo,
+        database: "myapp_dev_armstrong"
+      """)
+
+      assert Tak.has_database_config?(tmp_dir) == true
+    end
+
+    test "returns false when tak config exists but no database", %{tmp_dir: tmp_dir} do
+      config_dir = Path.join(tmp_dir, "config")
+      File.mkdir_p!(config_dir)
+
+      File.write!(Path.join(config_dir, "dev.local.exs"), """
+      import Config
+
+      # Tak worktree config (armstrong)
+      config :myapp, MyappWeb.Endpoint,
+        http: [port: 4010]
+      """)
+
+      assert Tak.has_database_config?(tmp_dir) == false
+    end
+
+    test "returns false when database config exists but not from tak", %{tmp_dir: tmp_dir} do
+      config_dir = Path.join(tmp_dir, "config")
+      File.mkdir_p!(config_dir)
+
+      File.write!(Path.join(config_dir, "dev.local.exs"), """
+      import Config
+
+      config :myapp, Myapp.Repo,
+        database: "myapp_dev"
+      """)
+
+      assert Tak.has_database_config?(tmp_dir) == false
+    end
+
+    test "returns false when no config file exists", %{tmp_dir: tmp_dir} do
+      assert Tak.has_database_config?(tmp_dir) == false
     end
   end
 

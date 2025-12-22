@@ -68,6 +68,7 @@ defmodule Mix.Tasks.Tak.Remove do
     branch = Tak.get_worktree_branch(worktree_path)
     port = Tak.get_worktree_port(worktree_path)
     database = Tak.database_for(name)
+    has_db = Tak.has_database_config?(worktree_path)
 
     # Stop services on port
     if port do
@@ -116,12 +117,14 @@ defmodule Mix.Tasks.Tak.Remove do
       end
     end
 
-    # Drop database
-    Mix.shell().info("Dropping database #{database}...")
+    # Drop database (only if it was created)
+    if has_db do
+      Mix.shell().info("Dropping database #{database}...")
 
-    case System.cmd("dropdb", [database], stderr_to_stdout: true) do
-      {_, 0} -> :ok
-      {_, _} -> Mix.shell().info("Database not dropped (may not exist)")
+      case System.cmd("dropdb", [database], stderr_to_stdout: true) do
+        {_, 0} -> :ok
+        {_, _} -> Mix.shell().info("Database not dropped (may not exist)")
+      end
     end
 
     # Success output
@@ -130,7 +133,7 @@ defmodule Mix.Tasks.Tak.Remove do
     Mix.shell().info("")
     Mix.shell().info("  Name:     #{name}")
     if branch && branch != "unknown", do: Mix.shell().info("  Branch:   #{branch}")
-    Mix.shell().info("  Database: #{database}")
+    if has_db, do: Mix.shell().info("  Database: #{database}")
   end
 
 end

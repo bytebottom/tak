@@ -66,7 +66,7 @@ defmodule Mix.Tasks.Tak.List do
         worktree_path = Path.join(trees_dir, name)
         branch = Tak.get_worktree_branch(worktree_path) || "unknown"
         port = Tak.get_worktree_port(worktree_path)
-        database = Tak.database_for(name)
+        has_db = Tak.has_database_config?(worktree_path)
 
         {status, color, running_acc, stopped_acc} = check_status(port, running_acc, stopped_acc)
         pid = if status == "RUNNING", do: Tak.pid_on_port(port), else: nil
@@ -74,7 +74,7 @@ defmodule Mix.Tasks.Tak.List do
         Mix.shell().info(IO.ANSI.format([:bright, name, :reset, " ", :faint, "(#{branch})"]))
 
         if port, do: Mix.shell().info("  Port:     #{port}")
-        Mix.shell().info("  Database: #{database}")
+        if has_db, do: Mix.shell().info("  Database: #{Tak.database_for(name)}")
 
         if pid do
           Mix.shell().info(IO.ANSI.format(["  Status:   ", color, status, :reset, :faint, " (PID: #{pid})"]))

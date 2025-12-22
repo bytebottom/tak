@@ -21,7 +21,7 @@ Git worktree management for Elixir/Phoenix development.
    ```elixir
    def deps do
      [
-       {:tak, "~> 0.1.0", only: :dev}
+       {:tak, "~> 0.2.0", only: :dev}
      ]
    end
    ```
@@ -52,6 +52,7 @@ Git worktree management for Elixir/Phoenix development.
 ```bash
 $ mix tak.create feature/login
 $ mix tak.create feature/login armstrong  # specify name
+$ mix tak.create feature/login --no-db    # skip database setup
 ```
 
 This will:
@@ -93,7 +94,8 @@ Configure Tak in your `config/config.exs`:
 config :tak,
   names: ~w(armstrong hickey mccarthy lovelace kay valim),
   base_port: 4000,
-  trees_dir: "trees"
+  trees_dir: "trees",
+  create_database: true
 ```
 
 ### Options
@@ -103,6 +105,7 @@ config :tak,
 | `names` | `~w(armstrong hickey mccarthy lovelace kay valim)` | Available worktree slot names |
 | `base_port` | `4000` | Base port (worktrees use 4010, 4020, etc.) |
 | `trees_dir` | `"trees"` | Directory to store worktrees |
+| `create_database` | `true` | Whether to run `mix ecto.setup` on create |
 
 ## How it works
 

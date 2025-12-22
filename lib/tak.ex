@@ -19,7 +19,17 @@ defmodule Tak do
       config :tak,
         names: ~w(armstrong hickey mccarthy lovelace kay valim),
         base_port: 4000,
-        trees_dir: "trees"
+        trees_dir: "trees",
+        create_database: true
+
+  ### Options
+
+    * `names` - Available worktree slot names (default: armstrong, hickey, mccarthy, lovelace, kay, valim)
+    * `base_port` - Base port number; worktrees use 4010, 4020, etc. (default: 4000)
+    * `trees_dir` - Directory to store worktrees (default: "trees")
+    * `create_database` - Whether to run `mix ecto.setup` on create (default: true)
+
+  The `create_database` option can be overridden per-command with `--db` or `--no-db` flags.
 
   ## How It Works
 
@@ -33,6 +43,7 @@ defmodule Tak do
   @default_names ~w(armstrong hickey mccarthy lovelace kay valim)
   @default_base_port 4000
   @default_trees_dir "trees"
+  @default_create_database true
 
   @doc """
   Returns the list of available worktree names.
@@ -53,6 +64,13 @@ defmodule Tak do
   """
   def trees_dir do
     Application.get_env(:tak, :trees_dir, @default_trees_dir)
+  end
+
+  @doc """
+  Returns whether to create databases by default.
+  """
+  def create_database? do
+    Application.get_env(:tak, :create_database, @default_create_database)
   end
 
   @doc """
@@ -184,6 +202,23 @@ defmodule Tak do
 
       true ->
         nil
+    end
+  end
+
+  @doc """
+  Checks if a worktree has tak-managed database config in dev.local.exs.
+  """
+  def has_database_config?(worktree_path) do
+    dev_local_path = Path.join([worktree_path, "config", "dev.local.exs"])
+
+    if File.exists?(dev_local_path) do
+      content = File.read!(dev_local_path)
+      # Check for tak-specific config block with database
+      String.contains?(content, "# Tak worktree config") and
+        String.contains?(content, "Repo,") and
+        String.contains?(content, "database:")
+    else
+      false
     end
   end
 
