@@ -65,4 +65,30 @@ defmodule TakTest do
       assert is_boolean(result)
     end
   end
+
+  describe "endpoint/0" do
+    test "infers from app name by default" do
+      assert Tak.endpoint() == TakWeb.Endpoint
+    end
+
+    test "respects config override" do
+      Application.put_env(:tak, :endpoint, MyCustomWeb.Endpoint)
+      assert Tak.endpoint() == MyCustomWeb.Endpoint
+    after
+      Application.delete_env(:tak, :endpoint)
+    end
+  end
+
+  describe "repo/0" do
+    test "infers from app name by default" do
+      assert Tak.repo() == Tak.Repo
+    end
+
+    test "respects config override" do
+      Application.put_env(:tak, :repo, MyCustom.Repo)
+      assert Tak.repo() == MyCustom.Repo
+    after
+      Application.delete_env(:tak, :repo)
+    end
+  end
 end

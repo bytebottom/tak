@@ -1,11 +1,5 @@
 defmodule Tak.Git do
-  @moduledoc """
-  Git operations used by Tak's Mix tasks.
-
-  All functions shell out to `git` and require it to be on `PATH`. They are
-  designed to be called from the main repository root, not from inside a
-  worktree directory.
-  """
+  @moduledoc false
 
   @doc """
   Returns the branch name checked out in a worktree, or `nil` if it cannot
@@ -46,20 +40,23 @@ defmodule Tak.Git do
   end
 
   @doc """
-  Returns the current branch name, or `"unknown"` if `git` fails.
-
-  Runs `git branch --show-current`. Returns an empty string on a detached
-  HEAD, which callers should treat as an unknown state.
+  Returns the current branch name, or `nil` on failure or detached HEAD.
 
   ## Example
 
       Tak.Git.current_branch()
-      # => "main"
+      # => "main" or nil
   """
   def current_branch do
     case System.cmd("git", ["branch", "--show-current"], stderr_to_stdout: true) do
-      {output, 0} -> String.trim(output)
-      _ -> "unknown"
+      {output, 0} ->
+        case String.trim(output) do
+          "" -> nil
+          branch -> branch
+        end
+
+      _ ->
+        nil
     end
   end
 

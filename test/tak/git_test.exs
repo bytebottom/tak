@@ -2,10 +2,13 @@ defmodule Tak.GitTest do
   use ExUnit.Case, async: false
 
   describe "current_branch/0" do
-    test "returns a branch name" do
+    test "returns a branch name or nil" do
       branch = Tak.Git.current_branch()
-      assert is_binary(branch)
-      assert String.length(branch) > 0
+      assert is_binary(branch) or is_nil(branch)
+
+      if branch do
+        assert String.length(branch) > 0
+      end
     end
   end
 
