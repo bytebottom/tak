@@ -3,7 +3,7 @@ defmodule Mix.Tasks.Tak.Remove do
   @moduledoc """
   Removes a git worktree and cleans up associated resources.
 
-      $ mix tak.remove <name> [--force]
+      $ mix tak.remove <name> [--force] [--yes]
 
   This will:
 
@@ -16,11 +16,13 @@ defmodule Mix.Tasks.Tak.Remove do
 
     * `name` - The worktree name to remove (required)
     * `--force` - Force removal even with uncommitted changes
+    * `--yes` - Skip confirmation prompt
 
   ## Examples
 
       $ mix tak.remove armstrong
       $ mix tak.remove armstrong --force
+      $ mix tak.remove armstrong --yes
 
   """
 
@@ -28,16 +30,39 @@ defmodule Mix.Tasks.Tak.Remove do
 
   @impl Mix.Task
   def run(args) do
-    {opts, args, _} = OptionParser.parse(args, strict: [force: :boolean])
+    {opts, args, _} = OptionParser.parse(args, strict: [force: :boolean, yes: :boolean])
     force = Keyword.get(opts, :force, false)
+    skip_confirm = Keyword.get(opts, :yes, false)
 
     case args do
       [] ->
-        Mix.shell().error("Usage: mix tak.remove <name> [--force]")
+        Mix.shell().error("Usage: mix tak.remove <name> [--force] [--yes]")
         list_available_worktrees()
         exit({:shutdown, 1})
 
       [name | _] ->
+        trees_dir = Tak.trees_dir()
+        worktree_path = Path.join(trees_dir, name)
+
+        unless File.dir?(worktree_path) do
+          Mix.shell().error("Error: Worktree #{worktree_path} does not exist")
+          list_available_worktrees()
+          exit({:shutdown, 1})
+        end
+
+        unless skip_confirm do
+          has_db = Tak.has_database_config?(worktree_path)
+
+          Mix.shell().info("This will remove:")
+          Mix.shell().info("  Worktree: #{worktree_path}")
+          if has_db, do: Mix.shell().info("  Database: #{Tak.database_for(name)}")
+
+          unless Mix.shell().yes?("Continue?") do
+            Mix.shell().info("Aborted.")
+            exit(:normal)
+          end
+        end
+
         remove_worktree(name, force)
     end
   end
@@ -57,12 +82,6 @@ defmodule Mix.Tasks.Tak.Remove do
   defp remove_worktree(name, force) do
     trees_dir = Tak.trees_dir()
     worktree_path = Path.join(trees_dir, name)
-
-    unless File.dir?(worktree_path) do
-      Mix.shell().error("Error: Worktree #{worktree_path} does not exist")
-      list_available_worktrees()
-      exit({:shutdown, 1})
-    end
 
     # Get info before removal
     branch = Tak.get_worktree_branch(worktree_path)
