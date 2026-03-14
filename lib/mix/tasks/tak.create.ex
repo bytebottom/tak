@@ -53,31 +53,17 @@ defmodule Mix.Tasks.Tak.Create do
         exit({:shutdown, 1})
 
       [branch | rest] ->
-        name =
-          case List.first(rest) do
-            nil ->
-              case Tak.Worktrees.pick_available_name() do
-                {:ok, name} -> name
-                {:error, :no_slots} ->
-                  Mix.shell().error("Error: All worktree names are in use (#{Enum.join(Tak.names(), ", ")})")
-                  exit({:shutdown, 1})
-              end
+        name = List.first(rest)
 
-            name ->
-              name
-          end
-
-        Mix.shell().info("Creating worktree '#{name}' for branch '#{branch}'...")
-
-        port = Tak.port_for(name)
-
-        if port && Tak.Port.in_use?(port) do
-          Mix.shell().info("Warning: Port #{port} is already in use")
-        end
+        Mix.shell().info("Creating worktree for branch '#{branch}'...")
 
         case Tak.Worktrees.create(branch, name, create_db: create_db) do
           {:ok, worktree} ->
             render_success(worktree)
+
+          {:error, :no_slots} ->
+            Mix.shell().error("Error: All worktree names are in use (#{Enum.join(Tak.names(), ", ")})")
+            exit({:shutdown, 1})
 
           {:error, {:invalid_name, n}} ->
             Mix.shell().error("Error: Invalid name '#{n}'. Choose from: #{Enum.join(Tak.names(), ", ")}")

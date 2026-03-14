@@ -147,17 +147,7 @@ defmodule Tak do
     Mix.Project.config()[:app]
   end
 
-  @doc """
-  Returns the CamelCase module name derived from the OTP application name.
-
-  Used when generating config file content that references `MyApp.Repo` and
-  `MyAppWeb.Endpoint`.
-
-  ## Example
-
-      iex> is_binary(Tak.module_name())
-      true
-  """
+  @doc false
   def module_name do
     app_name()
     |> Atom.to_string()

@@ -19,23 +19,25 @@ defmodule Mix.Tasks.Tak.List do
 
   @impl Mix.Task
   def run(_args) do
-    entries = Tak.Worktrees.list()
+    {main, worktrees} = Tak.Worktrees.list()
 
     Mix.shell().info("")
     Mix.shell().info(IO.ANSI.format([:bright, "Git Worktrees"]))
     Mix.shell().info("")
 
-    if Enum.count(entries) == 1 do
-      render_entry(hd(entries))
+    render_main(main)
+
+    if worktrees == [] do
       Mix.shell().info(IO.ANSI.format([:faint, "No worktrees found in #{Tak.trees_dir()}/"]))
       Mix.shell().info("")
       Mix.shell().info(IO.ANSI.format(["Create one with: ", :bright, "mix tak.create <branch-name>"]))
       Mix.shell().info("")
     else
-      running = Enum.count(entries, &(&1.status == :running))
-      stopped = Enum.count(entries, &(&1.status == :stopped))
+      Enum.each(worktrees, &render_worktree/1)
 
-      Enum.each(entries, &render_entry/1)
+      all = [main | worktrees]
+      running = Enum.count(all, &(&1.status == :running))
+      stopped = Enum.count(all, &(&1.status == :stopped))
 
       Mix.shell().info(
         IO.ANSI.format([
@@ -50,19 +52,25 @@ defmodule Mix.Tasks.Tak.List do
     end
   end
 
-  defp render_entry(entry) do
-    branch_display = entry.branch || "unknown"
-    label = if entry.main?, do: "(main repository)", else: "(#{branch_display})"
-    Mix.shell().info(IO.ANSI.format([:bright, entry.name, :reset, " ", :faint, label]))
+  defp render_main(entry) do
+    branch = entry.branch || "unknown"
+    Mix.shell().info(IO.ANSI.format([:bright, "main", :reset, " ", :faint, "(main repository)"]))
+    Mix.shell().info("  Branch: #{branch}")
+    Mix.shell().info("  Port:   #{entry.port}")
+    render_status(entry)
+    Mix.shell().info("")
+  end
 
-    if entry[:main?] do
-      Mix.shell().info("  Branch: #{branch_display}")
-      Mix.shell().info("  Port:   #{entry.port}")
-    else
-      if entry.port, do: Mix.shell().info("  Port:     #{entry.port}")
-      if entry.database, do: Mix.shell().info("  Database: #{entry.database}")
-    end
+  defp render_worktree(entry) do
+    branch = entry.branch || "unknown"
+    Mix.shell().info(IO.ANSI.format([:bright, entry.name, :reset, " ", :faint, "(#{branch})"]))
+    if entry.port, do: Mix.shell().info("  Port:     #{entry.port}")
+    if entry.database, do: Mix.shell().info("  Database: #{entry.database}")
+    render_status(entry)
+    Mix.shell().info("")
+  end
 
+  defp render_status(entry) do
     {status_str, color} = format_status(entry.status)
 
     if entry.pid do
@@ -71,8 +79,6 @@ defmodule Mix.Tasks.Tak.List do
     else
       Mix.shell().info(IO.ANSI.format(["  Status: ", color, status_str]))
     end
-
-    Mix.shell().info("")
   end
 
   defp format_status(:running), do: {"RUNNING", :green}

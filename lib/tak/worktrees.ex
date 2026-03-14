@@ -2,24 +2,9 @@ defmodule Tak.Worktrees do
   @moduledoc false
 
   @doc """
-  Returns the first available slot name, or `{:error, :no_slots}`.
-  """
-  def pick_available_name do
-    trees_dir = Tak.trees_dir()
-
-    available =
-      Enum.filter(Tak.names(), fn name ->
-        not File.dir?(Path.join(trees_dir, name))
-      end)
-
-    case available do
-      [] -> {:error, :no_slots}
-      [first | _] -> {:ok, first}
-    end
-  end
-
-  @doc """
   Creates a worktree. Returns `{:ok, %Tak.Worktree{}}` or `{:error, reason}`.
+
+  When `name` is `nil`, the first available slot is picked automatically.
 
   ## Options
 
@@ -28,7 +13,7 @@ defmodule Tak.Worktrees do
   def create(branch, name, opts \\ []) do
     create_db = Keyword.get(opts, :create_db, Tak.create_database?())
 
-    with :ok <- validate_name(name),
+    with {:ok, name} <- resolve_name(name),
          :ok <- validate_not_exists(name) do
       trees_dir = Tak.trees_dir()
       worktree_path = Path.join(trees_dir, name)
@@ -83,7 +68,12 @@ defmodule Tak.Worktrees do
   end
 
   @doc """
-  Lists all worktrees. Returns a list of worktree info maps.
+  Lists all worktrees. Returns `{main, worktrees}` where `main` is the
+  main repo entry and `worktrees` is a list. Both use the same map shape:
+
+      %{name, branch, port, status, pid, database, database_managed?}
+
+  Status is `:running`, `:stopped`, or `:unknown`.
   """
   def list do
     trees_dir = Tak.trees_dir()
@@ -98,8 +88,7 @@ defmodule Tak.Worktrees do
       status: main_status,
       pid: main_pid,
       database: nil,
-      database_managed?: false,
-      main?: true
+      database_managed?: false
     }
 
     worktrees =
@@ -115,7 +104,7 @@ defmodule Tak.Worktrees do
         []
       end
 
-    [main | worktrees]
+    {main, worktrees}
   end
 
   @doc """
@@ -197,7 +186,19 @@ defmodule Tak.Worktrees do
     {passed, failed, results}
   end
 
-  # --- Private helpers ---
+  defp pick_available_name do
+    trees_dir = Tak.trees_dir()
+
+    available =
+      Enum.filter(Tak.names(), fn name ->
+        not File.dir?(Path.join(trees_dir, name))
+      end)
+
+    case available do
+      [] -> {:error, :no_slots}
+      [first | _] -> {:ok, first}
+    end
+  end
 
   defp remove_git_worktree(worktree_path, force) do
     args =
@@ -211,8 +212,10 @@ defmodule Tak.Worktrees do
     end
   end
 
-  defp validate_name(name) do
-    if name in Tak.names(), do: :ok, else: {:error, {:invalid_name, name}}
+  defp resolve_name(nil), do: pick_available_name()
+
+  defp resolve_name(name) do
+    if name in Tak.names(), do: {:ok, name}, else: {:error, {:invalid_name, name}}
   end
 
   defp validate_not_exists(name) do
@@ -243,8 +246,7 @@ defmodule Tak.Worktrees do
       status: status,
       pid: pid,
       database: database,
-      database_managed?: database_managed?,
-      main?: false
+      database_managed?: database_managed?
     }
   end
 

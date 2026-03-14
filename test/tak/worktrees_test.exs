@@ -1,28 +1,33 @@
 defmodule Tak.WorktreesTest do
   use ExUnit.Case, async: false
 
-  describe "pick_available_name/0" do
-    test "returns first available name" do
-      assert {:ok, name} = Tak.Worktrees.pick_available_name()
-      assert name == List.first(Tak.names())
-    end
-  end
-
   describe "list/0" do
-    test "always includes main repository as first entry" do
-      [main | _] = Tak.Worktrees.list()
+    test "returns {main, worktrees} tuple" do
+      {main, worktrees} = Tak.Worktrees.list()
       assert main.name == "main"
-      assert main.main? == true
       assert is_integer(main.port)
       assert main.status in [:running, :stopped]
+      assert is_list(worktrees)
     end
 
-    test "returns status atoms, not strings" do
-      entries = Tak.Worktrees.list()
+    test "entries have consistent map shape" do
+      {main, worktrees} = Tak.Worktrees.list()
 
-      for entry <- entries do
+      for entry <- [main | worktrees] do
+        assert Map.has_key?(entry, :name)
+        assert Map.has_key?(entry, :branch)
+        assert Map.has_key?(entry, :port)
+        assert Map.has_key?(entry, :status)
+        assert Map.has_key?(entry, :pid)
+        assert Map.has_key?(entry, :database)
+        assert Map.has_key?(entry, :database_managed?)
         assert entry.status in [:running, :stopped, :unknown]
       end
+    end
+
+    test "main entry does not have main? key" do
+      {main, _} = Tak.Worktrees.list()
+      refute Map.has_key?(main, :main?)
     end
   end
 
@@ -51,6 +56,17 @@ defmodule Tak.WorktreesTest do
   describe "create/3 validation" do
     test "rejects invalid names" do
       assert {:error, {:invalid_name, "nope"}} = Tak.Worktrees.create("branch", "nope")
+    end
+
+    test "rejects already-existing worktrees" do
+      trees_dir = Tak.trees_dir()
+      name = List.first(Tak.names())
+      path = Path.join(trees_dir, name)
+
+      if File.dir?(path) do
+        assert {:error, {:already_exists, ^name}} =
+                 Tak.Worktrees.create("feature/test", name)
+      end
     end
   end
 end
