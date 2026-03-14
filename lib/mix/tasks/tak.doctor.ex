@@ -160,26 +160,22 @@ defmodule Mix.Tasks.Tak.Doctor do
   end
 
   defp check_git do
-    case System.cmd("which", ["git"], stderr_to_stdout: true) do
-      {_, 0} ->
-        print_check(:ok, "git available")
-        :ok
-
-      _ ->
-        print_check(:error, "git available", "Not found")
-        :error
+    if System.find_executable("git") do
+      print_check(:ok, "git available")
+      :ok
+    else
+      print_check(:error, "git available", "Not found")
+      :error
     end
   end
 
   defp check_dropdb do
-    case System.cmd("which", ["dropdb"], stderr_to_stdout: true) do
-      {_, 0} ->
-        print_check(:ok, "dropdb available")
-        :ok
-
-      _ ->
-        print_check(:warn, "dropdb available", "Not found (needed for tak.remove)")
-        :ok
+    if System.find_executable("dropdb") do
+      print_check(:ok, "dropdb available")
+      :ok
+    else
+      print_check(:warn, "dropdb available", "Not found (needed for tak.remove)")
+      :ok
     end
   end
 

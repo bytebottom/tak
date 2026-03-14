@@ -147,10 +147,7 @@ defmodule Tak do
   Checks if mise is available on the system.
   """
   def mise_available? do
-    case System.cmd("which", ["mise"], stderr_to_stdout: true) do
-      {_, 0} -> true
-      _ -> false
-    end
+    System.find_executable("mise") != nil
   end
 
   @doc """
