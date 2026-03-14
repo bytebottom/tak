@@ -3,17 +3,16 @@ defmodule Mix.Tasks.Tak.Remove do
   @moduledoc """
   Removes a git worktree and releases its port, branch, and database.
 
-      $ mix tak.remove <name> [--force] [--yes]
+      $ mix tak.remove <name> [--force] [--yes] [--keep-db]
 
   Steps, in order:
 
   1. Kill any process using the worktree's port (SIGTERM, then SIGKILL after 2s).
-     See `Tak.Port.kill/1`.
   2. Remove the git worktree directory.
   3. Delete the git branch with `git branch -d` (safe: skips if the branch is
      unmerged). Pass `--force` to use `git branch -D` instead.
-  4. Drop the database with `dropdb`, but only if tak created it (i.e., the
-     worktree has a Tak-managed database entry in `config/dev.local.exs`).
+  4. Drop the database with `dropdb`, but only if tak created it. Pass `--keep-db`
+     to skip database removal.
 
   Without `--yes`, the task prints what it will delete and asks for confirmation.
 
@@ -25,12 +24,14 @@ defmodule Mix.Tasks.Tak.Remove do
 
     * `--force` — remove even with uncommitted changes; force-delete the branch
     * `--yes` — skip the confirmation prompt
+    * `--keep-db` — keep the database instead of dropping it
 
   ## Examples
 
       $ mix tak.remove armstrong
       $ mix tak.remove armstrong --force
       $ mix tak.remove armstrong --yes
+      $ mix tak.remove armstrong --keep-db
 
   > #### Warning {: .warning}
   >
@@ -42,13 +43,16 @@ defmodule Mix.Tasks.Tak.Remove do
 
   @impl Mix.Task
   def run(args) do
-    {opts, args, _} = OptionParser.parse(args, strict: [force: :boolean, yes: :boolean])
+    {opts, args, _} =
+      OptionParser.parse(args, strict: [force: :boolean, yes: :boolean, keep_db: :boolean])
+
     force = Keyword.get(opts, :force, false)
     skip_confirm = Keyword.get(opts, :yes, false)
+    keep_db = Keyword.get(opts, :keep_db, false)
 
     case args do
       [] ->
-        Mix.shell().error("Usage: mix tak.remove <name> [--force] [--yes]")
+        Mix.shell().error("Usage: mix tak.remove <name> [--force] [--yes] [--keep-db]")
         list_available_worktrees()
         exit({:shutdown, 1})
 
@@ -63,11 +67,8 @@ defmodule Mix.Tasks.Tak.Remove do
         end
 
         unless skip_confirm do
-          has_db = Tak.Config.has_database?(worktree_path)
-
           Mix.shell().info("This will remove:")
           Mix.shell().info("  Worktree: #{worktree_path}")
-          if has_db, do: Mix.shell().info("  Database: #{Tak.database_for(name)}")
 
           unless Mix.shell().yes?("Continue?") do
             Mix.shell().info("Aborted.")
@@ -75,7 +76,22 @@ defmodule Mix.Tasks.Tak.Remove do
           end
         end
 
-        remove_worktree(name, force)
+        Mix.shell().info("Removing worktree '#{name}'...")
+
+        case Tak.Worktrees.remove(name, force: force, keep_db: keep_db) do
+          {:ok, worktree} ->
+            render_success(worktree)
+
+          {:error, {:not_found, n}} ->
+            Mix.shell().error("Error: Worktree #{Path.join(trees_dir, n)} does not exist")
+            exit({:shutdown, 1})
+
+          {:error, {:worktree_remove_failed, output}} ->
+            Mix.shell().error("Failed to remove worktree (uncommitted changes?)")
+            Mix.shell().error(output)
+            Mix.shell().info("Use --force to force removal")
+            exit({:shutdown, 1})
+        end
     end
   end
 
@@ -91,80 +107,12 @@ defmodule Mix.Tasks.Tak.Remove do
     end
   end
 
-  defp remove_worktree(name, force) do
-    trees_dir = Tak.trees_dir()
-    worktree_path = Path.join(trees_dir, name)
-
-    # Get info before removal
-    branch = Tak.Git.worktree_branch(worktree_path)
-    port = Tak.Config.get_port(worktree_path)
-    database = Tak.database_for(name)
-    has_db = Tak.Config.has_database?(worktree_path)
-
-    # Stop services on port
-    if port do
-      Mix.shell().info("Stopping services on port #{port}...")
-      Tak.Port.kill(port)
-    end
-
-    # Remove worktree
-    Mix.shell().info("Removing worktree...")
-
-    remove_result =
-      if force do
-        System.cmd("git", ["worktree", "remove", "--force", worktree_path], stderr_to_stdout: true)
-      else
-        System.cmd("git", ["worktree", "remove", worktree_path], stderr_to_stdout: true)
-      end
-
-    case remove_result do
-      {_, 0} ->
-        :ok
-
-      {output, _} ->
-        unless force do
-          Mix.shell().error("Failed to remove worktree (uncommitted changes?)")
-          Mix.shell().error(output)
-          Mix.shell().info("Use --force to force removal")
-          exit({:shutdown, 1})
-        end
-    end
-
-    # Clean up any orphaned files
-    File.rm_rf(worktree_path)
-    System.cmd("git", ["worktree", "prune"], stderr_to_stdout: true)
-
-    # Delete branch
-    if branch && branch != "unknown" do
-      Mix.shell().info("Deleting branch #{branch}...")
-
-      if force do
-        System.cmd("git", ["branch", "-D", branch], stderr_to_stdout: true)
-      else
-        case System.cmd("git", ["branch", "-d", branch], stderr_to_stdout: true) do
-          {_, 0} -> :ok
-          {_, _} -> Mix.shell().info("Branch not deleted (unmerged changes or doesn't exist)")
-        end
-      end
-    end
-
-    # Drop database (only if it was created)
-    if has_db do
-      Mix.shell().info("Dropping database #{database}...")
-
-      case System.cmd("dropdb", [database], stderr_to_stdout: true) do
-        {_, 0} -> :ok
-        {_, _} -> Mix.shell().info("Database not dropped (may not exist)")
-      end
-    end
-
-    # Success output
+  defp render_success(worktree) do
     Mix.shell().info("")
     Mix.shell().info(IO.ANSI.format([:green, "Worktree removed successfully!"]))
     Mix.shell().info("")
-    Mix.shell().info("  Name:     #{name}")
-    if branch && branch != "unknown", do: Mix.shell().info("  Branch:   #{branch}")
-    if has_db, do: Mix.shell().info("  Database: #{database}")
+    Mix.shell().info("  Name:     #{worktree.name}")
+    if worktree.branch, do: Mix.shell().info("  Branch:   #{worktree.branch}")
+    if worktree.database, do: Mix.shell().info("  Database: #{worktree.database}")
   end
-
 end
