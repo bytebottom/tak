@@ -108,11 +108,20 @@ defmodule Tak do
 
   @doc """
   Checks if a port is in use.
+
+  Uses `:gen_tcp` to probe the port directly, avoiding a dependency on `lsof`.
   """
   def port_in_use?(port) do
-    case System.cmd("lsof", ["-i", ":#{port}"], stderr_to_stdout: true) do
-      {_, 0} -> true
-      _ -> false
+    case :gen_tcp.listen(port, reuseaddr: true) do
+      {:ok, socket} ->
+        :gen_tcp.close(socket)
+        false
+
+      {:error, :eaddrinuse} ->
+        true
+
+      {:error, _} ->
+        false
     end
   end
 

@@ -9,7 +9,7 @@ Git worktree management for Elixir/Phoenix development.
 ## Requirements
 
 - **Elixir/Phoenix** project with Ecto
-- **macOS or Linux** (uses `lsof` for port detection)
+- **macOS or Linux** (`lsof` optional, used for process management during removal)
 - **PostgreSQL** (for database management)
 - **Git** (for worktree management)
 - **mise** (optional, for PORT environment variable)
