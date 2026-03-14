@@ -74,9 +74,10 @@ Shows all worktrees with their branch, port, database, and running status.
 ```bash
 $ mix tak.remove armstrong
 $ mix tak.remove armstrong --force
+$ mix tak.remove armstrong --keep-db
 ```
 
-This will stop services, remove the worktree, delete the branch, and drop the database.
+This will stop services, remove the worktree, delete the branch, and drop the database. Use `--keep-db` to preserve the database.
 
 ### Check configuration
 
@@ -95,7 +96,9 @@ config :tak,
   names: ~w(armstrong hickey mccarthy lovelace kay valim),
   base_port: 4000,
   trees_dir: "trees",
-  create_database: true
+  create_database: true,
+  endpoint: MyAppWeb.Endpoint,
+  repo: MyApp.Repo
 ```
 
 ### Options
@@ -106,6 +109,8 @@ config :tak,
 | `base_port` | `4000` | Base port (worktrees use 4010, 4020, etc.) |
 | `trees_dir` | `"trees"` | Directory to store worktrees |
 | `create_database` | `true` | Whether to run `mix ecto.setup` on create |
+| `endpoint` | Inferred from app name | Phoenix endpoint module |
+| `repo` | Inferred from app name | Ecto repo module |
 
 ## How it works
 
