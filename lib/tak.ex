@@ -140,6 +140,9 @@ defmodule Tak do
 
   @doc """
   Kills processes on a given port.
+
+  Sends SIGTERM first to allow graceful shutdown, then SIGKILL after
+  2 seconds if the process is still running.
   """
   def kill_port(port) do
     case pid_on_port(port) do
@@ -147,8 +150,31 @@ defmodule Tak do
         :ok
 
       pid ->
-        System.cmd("kill", ["-9", pid], stderr_to_stdout: true)
+        System.cmd("kill", [pid], stderr_to_stdout: true)
+
+        if process_alive?(pid, _retries = 4, _interval_ms = 500) do
+          System.cmd("kill", ["-9", pid], stderr_to_stdout: true)
+        end
+
         :ok
+    end
+  end
+
+  defp process_alive?(pid, 0, _interval_ms), do: signal_zero?(pid)
+
+  defp process_alive?(pid, retries, interval_ms) do
+    if signal_zero?(pid) do
+      Process.sleep(interval_ms)
+      process_alive?(pid, retries - 1, interval_ms)
+    else
+      false
+    end
+  end
+
+  defp signal_zero?(pid) do
+    case System.cmd("kill", ["-0", pid], stderr_to_stdout: true) do
+      {_, 0} -> true
+      _ -> false
     end
   end
 
