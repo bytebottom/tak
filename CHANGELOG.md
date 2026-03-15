@@ -15,12 +15,12 @@
 - Preserve database identity on remove and report cleanup outcome separately (`:dropped`, `:kept`, `:failed`)
 - Treat `git worktree prune` as best-effort during remove, so prune failure after deletion does not turn a successful removal into an error
 - Harden `.tak` parsing with required-key and value-shape validation
-- Add a small `Tak.System` boundary so core workflow tests can exercise command-heavy paths without shelling out for real
+- Add a small system-command boundary so core workflow tests can exercise command-heavy paths without shelling out for real
 - Expand test coverage for metadata-first listing, legacy fallback, create failure cleanup, keep-db removal, and port collision warnings
 
 ## 0.4.0
 
-- **Breaking:** Internal helpers (`Tak.Config`, `Tak.Git`, `Tak.Port`) are now `@moduledoc false`
+- **Breaking:** Internal git, config, and port helpers are now hidden from generated docs
 - Extract all workflow orchestration from Mix tasks into `Tak.Worktrees` core module
 - Mix tasks are now thin wrappers: parse args, call core, render output
 - Add `%Tak.Worktree{}` struct as the canonical data shape
@@ -28,14 +28,14 @@
 - Add `:endpoint` and `:repo` config options for non-standard Phoenix naming
 - Add `--keep-db` flag to `mix tak.remove`
 - Slot selection is now deterministic (first available, not random)
-- Replace `"unknown"` string sentinel with `nil` in `Tak.Git.current_branch/0`
+- Replace the `"unknown"` branch sentinel with `nil` in branch detection
 - Tighten doctor `import_config` check to use regex instead of substring match
 - Legacy config scraping preserved as fallback for pre-metadata worktrees
 - Expanded test coverage (34 -> 51 tests)
 
 ## 0.3.0
 
-- **Breaking:** Extract `Tak.Port`, `Tak.Config`, and `Tak.Git` modules from monolithic `Tak` module
+- **Breaking:** Extract internal port, config, and git helpers from monolithic `Tak`
 - Add confirmation prompt to `mix tak.remove` (skip with `--yes`)
 - Use `:gen_tcp` for port detection instead of `lsof` (removes system dependency for create/list)
 - Graceful process shutdown: send SIGTERM before SIGKILL when stopping worktree services
