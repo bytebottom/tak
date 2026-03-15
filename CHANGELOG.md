@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- Show the auto-picked worktree name before `mix tak.create` begins work
+- Remove redundant `main?` from `%Tak.WorktreeStatus{}` and infer main status from `worktree.name`
+
 ## 0.4.1
 
 - Document `Tak.Worktrees`, `Tak.Worktree`, `Tak.WorktreeStatus`, and `Tak.RemoveResult` as the supported runtime API
