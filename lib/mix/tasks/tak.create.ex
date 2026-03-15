@@ -54,8 +54,13 @@ defmodule Mix.Tasks.Tak.Create do
 
       [branch | rest] ->
         name = List.first(rest)
+        display_name = name || preview_auto_name()
 
-        Mix.shell().info("Creating worktree for branch '#{branch}'...")
+        if display_name do
+          Mix.shell().info("Creating worktree '#{display_name}' for branch '#{branch}'...")
+        else
+          Mix.shell().info("Creating worktree for branch '#{branch}'...")
+        end
 
         case Tak.Worktrees.create(branch, name, create_db: create_db) do
           {:ok, worktree} ->
@@ -100,6 +105,14 @@ defmodule Mix.Tasks.Tak.Create do
             exit({:shutdown, 1})
         end
     end
+  end
+
+  defp preview_auto_name do
+    trees_dir = Tak.trees_dir()
+
+    Enum.find(Tak.names(), fn candidate ->
+      not File.dir?(Path.join(trees_dir, candidate))
+    end)
   end
 
   defp render_success(worktree) do

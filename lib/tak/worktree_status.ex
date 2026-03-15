@@ -12,10 +12,9 @@ defmodule Tak.WorktreeStatus do
   @type t :: %__MODULE__{
           worktree: Tak.Worktree.t(),
           status: status(),
-          pid: String.t() | nil,
-          main?: boolean()
+          pid: String.t() | nil
         }
 
   @enforce_keys [:worktree, :status]
-  defstruct [:worktree, :status, :pid, main?: false]
+  defstruct [:worktree, :status, :pid]
 end

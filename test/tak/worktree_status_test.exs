@@ -15,6 +15,5 @@ defmodule Tak.WorktreeStatusTest do
     assert status.worktree == worktree
     assert status.status == :stopped
     assert status.pid == nil
-    assert status.main? == false
   end
 end

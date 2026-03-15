@@ -97,8 +97,7 @@ defmodule Tak.Worktrees do
         database_managed?: false
       },
       status: main_status,
-      pid: main_pid,
-      main?: true
+      pid: main_pid
     }
 
     worktrees =

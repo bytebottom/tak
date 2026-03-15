@@ -65,7 +65,6 @@ defmodule Tak.WorktreesTest do
       assert %Tak.Worktree{name: "main", port: port} = main.worktree
       assert is_integer(port)
       assert main.status in [:running, :stopped]
-      assert main.main? == true
       assert is_list(worktrees)
     end
 
@@ -76,16 +75,14 @@ defmodule Tak.WorktreesTest do
         assert %Tak.WorktreeStatus{} = entry
         assert %Tak.Worktree{} = entry.worktree
         assert entry.status in [:running, :stopped, :unknown]
-        assert is_boolean(entry.main?)
       end
     end
 
-    test "non-main entries are not marked as main" do
-      {_, worktrees} = Tak.Worktrees.list()
+    test "main status is inferred from the nested worktree name" do
+      {main, worktrees} = Tak.Worktrees.list()
 
-      assert Enum.all?(worktrees, fn entry ->
-               %Tak.WorktreeStatus{main?: false} = entry
-             end)
+      assert main.worktree.name == "main"
+      assert Enum.all?(worktrees, fn entry -> entry.worktree.name != "main" end)
     end
 
     test "prefers metadata over legacy config when both exist", %{trees_dir: trees_dir} do
